@@ -1,11 +1,12 @@
+import os
 import requests
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# ================= ⚙️ CONFIGURATION =================
-GEMINI_API_KEY = "AIzaSyBWuBpKgtl0ib01wRGH7i3ouBbe6Mck8T4" # ⚠️ এখানে আপনার আসল API Key বসাবেন
-# ⚠️ FIX: মডেল আপডেট করে gemini-2.5-flash দেওয়া হয়েছে
+# ================= ⚙️ SECURE CONFIGURATION =================
+# ⚠️ Environment Variable থেকে API Key নেওয়া হচ্ছে (গিটহাবে আর লিক হবে না)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
 # ================= 🧠 MUSKAN'S SOUL =================
@@ -21,6 +22,9 @@ sessions = {}
 
 @app.route("/gf", methods=["GET"])
 def gf():
+    if not GEMINI_API_KEY:
+        return jsonify({"response": "Jaan, API key setup kora nei! 🥺💔"}), 500
+
     user_id = request.args.get("user_id", "default")
     prompt = request.args.get("prompt")
     
@@ -68,7 +72,7 @@ def gf():
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain (Direct API - Gemini 2.5) is Active! ❤️"
+    return "Muskan AI Brain (Secure API) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
