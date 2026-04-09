@@ -49,8 +49,8 @@ def gf():
     }
     
     payload = {
-        # ⚠️ FIX: একদম স্ট্যাবল এবং আনসেন্সরড বেঙ্গলি মডেল সেট করা হলো
-        "model": "google/gemma-2-9b-it:free", 
+        # ⚠️ FIX: একদম স্ট্যাবল এবং সুপারফাস্ট Llama 3.1 মডেল সেট করা হলো
+        "model": "meta-llama/llama-3.1-8b-instruct:free", 
         "messages": sessions[user_id],
         "temperature": 0.9, 
         "max_tokens": 400
@@ -75,7 +75,7 @@ def gf():
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain (Gemma Uncensored) is Active! ❤️"
+    return "Muskan AI Brain (Llama 3.1 Uncensored) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
