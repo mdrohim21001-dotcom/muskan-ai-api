@@ -5,9 +5,10 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # ================= ⚙️ CONFIGURATION =================
-# আপনার আগের Google Gemini API Key ব্যবহার করা হবে
+# আপনার Vercel-এ সেভ করা Google Gemini API Key ব্যবহার করা হবে
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+# ⚠️ FIX: মডেল আপডেট করে gemini-1.5-pro দেওয়া হয়েছে (যেটিতে ফ্রি লিমিট অনেক বেশি)
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
 
 # ================= 🧠 MUSKAN'S BENGALI SOUL =================
 SYSTEM_INSTRUCTION = (
@@ -86,7 +87,7 @@ def gf():
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain (Gemini 2.0 Deep Bengali) is Active! ❤️"
+    return "Muskan AI Brain (Gemini 1.5 Pro) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
