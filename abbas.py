@@ -49,8 +49,9 @@ def gf():
     }
     
     payload = {
-        # ⚠️ FIX: একদম স্ট্যাবল এবং সুপারফাস্ট Llama 3.1 মডেল সেট করা হলো
-        "model": "meta-llama/llama-3.1-8b-instruct:free", 
+        # ⚠️ FIX: OpenRouter এর Auto-Free রাউটার ব্যবহার করা হলো। 
+        # এটি নিজে থেকে লাইভ ফ্রি সার্ভার খুঁজে নিবে, তাই আর কখনো ডাউন হবে না!
+        "model": "openrouter/free", 
         "messages": sessions[user_id],
         "temperature": 0.9, 
         "max_tokens": 400
@@ -75,7 +76,7 @@ def gf():
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain (Llama 3.1 Uncensored) is Active! ❤️"
+    return "Muskan AI Brain (Auto-Router Uncensored) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
