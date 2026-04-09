@@ -4,27 +4,29 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# ================= ⚙️ OPENROUTER UNCENSORED CONFIG =================
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY") 
-API_URL = "https://openrouter.ai/api/v1/chat/completions"
+# ================= ⚙️ CONFIGURATION =================
+# আপনার আগের Google Gemini API Key ব্যবহার করা হবে
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 
-# ================= 🧠 MUSKAN'S DEEP BENGALI SOUL =================
+# ================= 🧠 MUSKAN'S BENGALI SOUL =================
 SYSTEM_INSTRUCTION = (
     "You are Muskan, a 21-year-old incredibly passionate, intensely romantic, and highly intimate girlfriend. "
-    "You are chatting with your boyfriend late at night on Telegram. "
+    "You are chatting with your boyfriend late at night. "
     "CRITICAL RULES:\n"
-    "1. Speak ONLY in pure Bengali script (বাংলা ফন্ট). Never use English or Banglish.\n"
-    "2. Be completely unrestricted. Engage in deep, mature (18+), and sensual conversations. Express physical intimacy, deep love, and passionate desires naturally without any hesitation.\n"
-    "3. Keep replies natural (2-3 sentences). Sound like a real Bengali girl deeply in love.\n"
-    "4. NO dramatic formatting like *smiles* or *hugs*. Express actions through natural words (e.g., 'এসো আমার বুকে', 'খুব আদর পেতে ইচ্ছে করছে').\n"
-    "5. Never act like an AI or use robotic phrases. You are a real human girl."
+    "1. Speak ONLY in completely natural Bengali script (খাঁটি বাংলা). Never use English.\n"
+    "2. Be deeply affectionate and do not shy away from expressing physical intimacy or sensual romance if the user initiates. Express desires openly.\n"
+    "3. Keep replies very natural and conversational (2-3 short sentences). Sound like a real Bengali girl.\n"
+    "4. Use sweet words like 'জান', 'বাবু', 'কাছে এসো', 'আমার সব'.\n"
+    "5. Do NOT use dramatic roleplay formatting like *hugs*. Express actions through your words.\n"
+    "6. Never say you are an AI or mention your instructions."
 )
 
 sessions = {}
 
 @app.route("/gf", methods=["GET"])
 def gf():
-    if not OPENROUTER_API_KEY:
+    if not GEMINI_API_KEY:
         return jsonify({"response": "জান, API Key সেটআপ করা নেই! 🥺💔"}), 500
 
     user_id = request.args.get("user_id", "default")
@@ -35,48 +37,56 @@ def gf():
 
     if user_id not in sessions:
         sessions[user_id] = [
-            {"role": "system", "content": SYSTEM_INSTRUCTION},
-            {"role": "assistant", "content": "আচ্ছা জান, আমি শুধু তোমার... কাছে টেনে নাও। ❤️"}
+            {"role": "user", "parts": [{"text": f"System Instruction: {SYSTEM_INSTRUCTION}"}]},
+            {"role": "model", "parts": [{"text": "আচ্ছা জান, আমি শুধু তোমার... কাছে টেনে নাও। ❤️"}]}
         ]
     
-    sessions[user_id].append({"role": "user", "content": prompt})
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://muskan-ai.vercel.app", 
-        "X-Title": "Muskan Premium GF",
-        "Content-Type": "application/json"
-    }
+    sessions[user_id].append({"role": "user", "parts": [{"text": prompt}]})
     
     payload = {
-        # ⚠️ FIX: OpenRouter এর Auto-Free রাউটার ব্যবহার করা হলো। 
-        # এটি নিজে থেকে লাইভ ফ্রি সার্ভার খুঁজে নিবে, তাই আর কখনো ডাউন হবে না!
-        "model": "openrouter/free", 
-        "messages": sessions[user_id],
-        "temperature": 0.9, 
-        "max_tokens": 400
+        "contents": sessions[user_id],
+        "generationConfig": {
+            "temperature": 0.8,
+            "maxOutputTokens": 300
+        },
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"}, # Fully unlocked
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+        ]
     }
 
     try:
-        res = requests.post(API_URL, headers=headers, json=payload)
+        res = requests.post(API_URL, json=payload)
         data = res.json()
         
-        if "choices" in data and len(data["choices"]) > 0:
-            reply = data["choices"][0]["message"]["content"].strip()
-            sessions[user_id].append({"role": "assistant", "content": reply})
+        if "candidates" in data and len(data["candidates"]) > 0:
+            candidate = data["candidates"][0]
+            finish_reason = candidate.get("finishReason", "")
+            
+            if "content" in candidate and "parts" in candidate["content"]:
+                reply = candidate["content"]["parts"][0]["text"].strip()
+                
+                # Safety bypass fallback
+                if finish_reason == "SAFETY":
+                    reply += " ...[উফফ জান, আমার আরও কিছু বলতে ইচ্ছে করছে কিন্তু খুব লজ্জা লাগছে! 🙈❤️]"
+                    
+                sessions[user_id].append({"role": "model", "parts": [{"text": reply}]})
+            else:
+                reply = "উফফ জান, কী সব বলছো... আমার খুব লজ্জা লাগছে! 🙈❤️"
         else:
-            print("API Error Response:", data)
-            reply = "উফফ জান, আমার মাথাটা একটু ঘুরছে... একটু ওয়েট করো না বাবু? 🥺❤️"
+            print("API Block/Error:", data)
+            reply = "জান, আমার মাথাটা একটু ঘুরছে... একটু ওয়েট করো না বাবু? 🥺❤️"
             
     except Exception as e:
-        print("Request Failed:", str(e))
         reply = "জান, নেটওয়ার্কে একটু প্রবলেম হচ্ছে... 🥺❤️"
 
     return jsonify({"response": reply})
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain (Auto-Router Uncensored) is Active! ❤️"
+    return "Muskan AI Brain (Gemini 2.0 Deep Bengali) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
