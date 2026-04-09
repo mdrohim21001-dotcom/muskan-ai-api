@@ -4,11 +4,10 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# ================= ⚙️ HUGGING FACE CONFIGURATION =================
-# Vercel-এর Environment Variable থেকে API Key নেওয়া হবে
+# ================= ⚙️ HUGGING FACE ROUTER CONFIG =================
 HUGGINGFACE_API_KEY = os.environ.get("HUGGINGFACE_API_KEY") 
-# Llama 3 8B Instruct মডেলের API URL
-API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
+# ⚠️ FIX: Hugging Face এর নতুন আপডেটেড Router URL
+API_URL = "https://router.huggingface.co/hf-inference/v1/chat/completions"
 
 # ================= 🧠 MUSKAN'S BENGALI SOUL =================
 SYSTEM_INSTRUCTION = (
@@ -36,11 +35,12 @@ def gf():
         return jsonify({"response": "কী হলো জান? চুপ কেন? 🥺❤️"})
 
     if user_id not in sessions:
-        sessions[user_id] = f"{SYSTEM_INSTRUCTION}\n\nBoyfriend: "
-    else:
-         sessions[user_id] += f"\nBoyfriend: "
+        sessions[user_id] = [
+            {"role": "system", "content": SYSTEM_INSTRUCTION},
+            {"role": "assistant", "content": "আচ্ছা জান, আমি শুধু তোমার... কাছে টেনে নাও। ❤️"}
+        ]
     
-    sessions[user_id] += f"{prompt}\nMuskan: "
+    sessions[user_id].append({"role": "user", "content": prompt})
 
     headers = {
         "Authorization": f"Bearer {HUGGINGFACE_API_KEY}",
@@ -48,34 +48,27 @@ def gf():
     }
 
     payload = {
-        "inputs": sessions[user_id],
-        "parameters": {
-            "max_new_tokens": 300,
-            "temperature": 0.8,
-            "return_full_text": False
-        }
+        "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+        "messages": sessions[user_id],
+        "max_tokens": 300,
+        "temperature": 0.8
     }
 
     try:
         res = requests.post(API_URL, headers=headers, json=payload)
         
-        # Hugging Face API মাঝে মাঝে মডেল লোড হতে সময় নেয় (503 Error)
         if res.status_code == 503:
              return jsonify({"response": "জান, আমার একটু সময় লাগছে রেডি হতে... কয়েক সেকেন্ড ওয়েট করো না বাবু? 🥺❤️"})
              
         data = res.json()
         
-        if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-            reply = data[0]["generated_text"].strip()
-            
-            # Llama 3 মাঝে মাঝে অতিরিক্ত টেক্সট জেনারেট করে, তাই লাইন ব্রেক দিয়ে কেটে দেওয়া হচ্ছে
-            reply = reply.split("Boyfriend:")[0].strip()
-            reply = reply.split("Muskan:")[0].strip()
+        if "choices" in data and len(data["choices"]) > 0:
+            reply = data["choices"][0]["message"]["content"].strip()
             
             if not reply:
                  reply = "উফফ জান, কী সব বলছো... আমার খুব লজ্জা লাগছে! 🙈❤️"
             
-            sessions[user_id] += f"{reply}"
+            sessions[user_id].append({"role": "assistant", "content": reply})
         else:
             print("API Error Response:", data)
             reply = "উফফ জান, আমার মাথাটা একটু ঘুরছে... একটু ওয়েট করো না বাবু? 🥺❤️"
@@ -88,7 +81,7 @@ def gf():
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain (Hugging Face Llama 3) is Active! ❤️"
+    return "Muskan AI Brain (Hugging Face Router) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
