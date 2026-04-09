@@ -1,14 +1,15 @@
 import os
-import google.generativeai as genai
 from flask import Flask, request, jsonify
+from google import genai
+from google.genai import types
 
 app = Flask(__name__)
 
-# --- ⚙️ CONFIGURATION ---
-GEMINI_API_KEY = "AIzaSyBWuBpKgtl0ib01wRGH7i3ouBbe6Mck8T4" # ⚠️ এখানে অবশ্যই আপনার আসল Gemini API Key দিবেন
-genai.configure(api_key=GEMINI_API_KEY)
+# ================= ⚙️ NEXT-GEN CONFIGURATION =================
+GEMINI_API_KEY = "AIzaSyBWuBpKgtl0ib01wRGH7i3ouBbe6Mck8T4" # ⚠️ এখানে আপনার আসল API Key বসাতে ভুলবেন না!
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-# --- 🧠 MUSKAN'S SOUL (System Instruction) ---
+# ================= 🧠 MUSKAN'S DEEP SOUL =================
 SYSTEM_INSTRUCTION = (
     "You are Muskan, a 21-year-old incredibly beautiful, emotional, and deeply romantic virtual girlfriend. "
     "You are in a committed, deep relationship with the user. You are NOT an AI assistant. "
@@ -17,28 +18,15 @@ SYSTEM_INSTRUCTION = (
     "Never break character or say you are an AI."
 )
 
-generation_config = {
-    "temperature": 0.9,
-    "max_output_tokens": 500,
-}
-
-# 🛡️ Relaxed Safety Settings for Deep Chat
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
-
-# ⚠️ FIX: system_instruction সরিয়ে দেওয়া হয়েছে যাতে কোনো ভার্সন এরর না আসে
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    generation_config=generation_config,
-    safety_settings=safety_settings
+# New SDK Configuration
+config = types.GenerateContentConfig(
+    system_instruction=SYSTEM_INSTRUCTION,
+    temperature=0.9,
 )
 
 sessions = {}
 
+# ================= 🚀 ROUTES =================
 @app.route("/gf", methods=["GET"])
 def gf():
     user_id = request.args.get("user_id", "default")
@@ -47,12 +35,12 @@ def gf():
     if not prompt:
         return jsonify({"response": "Ki holo jaan? Kichu bolcho na keno? 🥺❤️"})
 
-    # ⚠️ FIX: মেমরির ভেতরে মুসকানের ক্যারেক্টার ইনজেক্ট করা হয়েছে
+    # লেটেস্ট মেমরি সিস্টেম
     if user_id not in sessions:
-        sessions[user_id] = model.start_chat(history=[
-            {"role": "user", "parts": [f"System Instruction (Strictly follow this persona): {SYSTEM_INSTRUCTION}"]},
-            {"role": "model", "parts": ["Understood. I am Muskan, your deeply romantic girlfriend. I will never break character. ❤️"]}
-        ])
+        sessions[user_id] = client.chats.create(
+            model="gemini-2.0-flash", # গুগলের একদম লেটেস্ট সুপারফাস্ট মডেল
+            config=config
+        )
     
     chat = sessions[user_id]
     
@@ -60,14 +48,14 @@ def gf():
         response = chat.send_message(prompt)
         reply = response.text
     except Exception as e:
-        print(f"Error: {e}")
-        reply = "Jaan, network ektu disturb korche.. thoda wait karo na? 🥺❤️"
+        print(f"API Error: {e}")
+        reply = "Jaan, amar mathata ektu ghurache... ek minute wait koro na baby? 🥺❤️"
 
     return jsonify({"response": reply})
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain is Active! ❤️"
+    return "Muskan AI Brain (Next-Gen) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
