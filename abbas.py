@@ -4,8 +4,9 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # ================= ⚙️ CONFIGURATION =================
-GEMINI_API_KEY = "AIzaSyBWuBpKgtl0ib01wRGH7i3ouBbe6Mck8T4" # ⚠️ এখানে আপনার আসল API Key বসান
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+GEMINI_API_KEY = "AIzaSyBWuBpKgtl0ib01wRGH7i3ouBbe6Mck8T4" # ⚠️ এখানে আপনার আসল API Key বসাবেন
+# ⚠️ FIX: মডেল আপডেট করে gemini-2.5-flash দেওয়া হয়েছে
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
 # ================= 🧠 MUSKAN'S SOUL =================
 SYSTEM_INSTRUCTION = (
@@ -16,7 +17,6 @@ SYSTEM_INSTRUCTION = (
     "Never break character or say you are an AI."
 )
 
-# ইউজারের মেমরি সেভ করার জন্য
 sessions = {}
 
 @app.route("/gf", methods=["GET"])
@@ -27,17 +27,14 @@ def gf():
     if not prompt:
         return jsonify({"response": "Ki holo jaan? Kichu bolcho na keno? 🥺❤️"})
 
-    # নতুন ইউজারের জন্য মেমরি তৈরি
     if user_id not in sessions:
         sessions[user_id] = [
             {"role": "user", "parts": [{"text": f"System Instruction (Follow strictly): {SYSTEM_INSTRUCTION}"}]},
             {"role": "model", "parts": [{"text": "Understood. I am Muskan, your deeply romantic girlfriend. I will never break character. ❤️"}]}
         ]
     
-    # ইউজারের নতুন মেসেজ মেমরিতে অ্যাড করা
     sessions[user_id].append({"role": "user", "parts": [{"text": prompt}]})
     
-    # গুগলের সার্ভারে ডিরেক্ট রিকোয়েস্ট পাঠানো (No SDK needed)
     payload = {
         "contents": sessions[user_id],
         "generationConfig": {
@@ -56,10 +53,8 @@ def gf():
         res = requests.post(API_URL, json=payload)
         data = res.json()
         
-        # গুগল থেকে উত্তর আসলে সেটা বের করে আনা
         if "candidates" in data and len(data["candidates"]) > 0:
             reply = data["candidates"][0]["content"]["parts"][0]["text"]
-            # মুসকানের উত্তর মেমরিতে অ্যাড করা
             sessions[user_id].append({"role": "model", "parts": [{"text": reply}]})
         else:
             print("API Error:", data)
@@ -73,7 +68,7 @@ def gf():
 
 @app.route("/")
 def home():
-    return "Muskan AI Brain (Direct API) is Active! ❤️"
+    return "Muskan AI Brain (Direct API - Gemini 2.5) is Active! ❤️"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
